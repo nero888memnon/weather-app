@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Forecast</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-blue-200 to-blue-400 min-h-screen flex flex-col items-center p-4">
+  <div class="w-full max-w-xl bg-white shadow-lg rounded-lg p-6">
+    <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">Weather Forecast</h1>
+    <div class="flex gap-2 mb-4">
+      <input id="location" type="text" placeholder="Enter location..." class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <button id="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
+    </div>
+
+    <div id="forecast" style="display: none">
+      <div id="current" class="mb-6">
+        <div class="label font-semibold text-lg text-gray-700 mb-2">Current conditions</div>
+      </div>
+
+      <div id="upcoming">
+        <div class="label font-semibold text-lg text-gray-700 mb-2">Three-day forecast</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function attachEvents() {
+      const locationInput = document.getElementById('location');
+      const submitBtn = document.getElementById('submit');
+      const forecastDiv = document.getElementById('forecast');
+      const currentDiv = document.getElementById('current');
+      const upcomingDiv = document.getElementById('upcoming');
+
+      const apiKey = '7b21c935e40146f3a87122441252503';
+
+      const symbols = {
+        'sunny': '☀',
+        'partly sunny': '⛅',
+        'partly cloudy': '⛅',
+        'cloudy': '☁',
+        'overcast': '☁',
+        'clear': '☀',
+        'rain': '☂',
+        'light rain': '☂',
+        'moderate rain': '☂',
+        'heavy rain': '☂',
+        'degrees': '°'
+      };
+
+      submitBtn.addEventListener('click', async () => {
+        const city = locationInput.value.trim();
+
+        currentDiv.innerHTML = `<div class="label font-semibold text-lg text-gray-700 mb-2">Current conditions</div>`;
+        upcomingDiv.innerHTML = `<div class="label font-semibold text-lg text-gray-700 mb-2">Three-day forecast</div>`;
+        forecastDiv.style.display = 'none';
+
+        try {
+          const currentRes = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${city}`);
+          const currentData = await currentRes.json();
+
+          const forecastRes = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=3`);
+          const forecastData = await forecastRes.json();
+
+          if (currentData.error || forecastData.error) throw new Error('Invalid city or server error');
+
+          forecastDiv.style.display = 'block';
+
+          const condition = currentData.current.condition.text.toLowerCase();
+          const current = document.createElement('div');
+          current.className = 'flex items-center gap-4 p-4 bg-blue-100 rounded-lg shadow';
+          current.innerHTML = `
+            <span class="text-4xl">${symbols[condition] || ''}</span>
+            <div class="text-gray-800">
+              <div class="font-bold text-lg">${currentData.location.name}, ${currentData.location.country}</div>
+              <div>${currentData.current.temp_c}${symbols['degrees']}C</div>
+              <div>${currentData.current.condition.text}</div>
+            </div>
+          `;
+          currentDiv.appendChild(current);
+
+          const forecastInfo = document.createElement('div');
+          forecastInfo.className = 'grid grid-cols-1 sm:grid-cols-3 gap-4';
+
+          forecastData.forecast.forecastday.forEach(day => {
+            const forecastCondition = day.day.condition.text.toLowerCase();
+            const dayEl = document.createElement('div');
+            dayEl.className = 'bg-white p-4 rounded shadow text-center';
+            dayEl.innerHTML = `
+              <div class="text-3xl mb-2">${symbols[forecastCondition] || ''}</div>
+              <div class="text-gray-800">${day.day.mintemp_c}${symbols['degrees']}/${day.day.maxtemp_c}${symbols['degrees']} C</div>
+              <div class="text-sm text-gray-600">${day.day.condition.text}</div>
+            `;
+            forecastInfo.appendChild(dayEl);
+          });
+
+          upcomingDiv.appendChild(forecastInfo);
+
+        } catch (error) {
+          console.error("Weather API Error:", error.message || error);
+          forecastDiv.style.display = 'block';
+          currentDiv.innerHTML += `<div class="text-red-500 font-semibold mt-2">Error: Unable to fetch forecast</div>`;
+        }
+      });
+    }
+
+    attachEvents();
+  </script>
+</body>
+</html>
